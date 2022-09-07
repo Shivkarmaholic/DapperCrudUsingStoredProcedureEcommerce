@@ -2,6 +2,7 @@
 using DapperCrudUsingStoredProcedure.Context;
 using DapperCrudUsingStoredProcedure.Models;
 using DapperCrudUsingStoredProcedure.Repositories.Interfaces;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration.EnvironmentVariables;
 using System.Data;
 
@@ -69,20 +70,8 @@ namespace DapperCrudUsingStoredProcedure.Repositories
                 dynamicParameters.Add("email",users.Email);
                 dynamicParameters.Add("passwordd", users.Password);
                 int userid = await connection.QuerySingleAsync<int>("RegisterUserTable_SP", dynamicParameters, commandType: CommandType.StoredProcedure);
-                int result = 0; ;
-                foreach(var user in users.Address)
-                {
-                    DynamicParameters dp = new DynamicParameters();
-                    dp.Add("userId", userid);
-                    dp.Add("addressLine1", user.AddressLine1);
-                    dp.Add("addressLine2", user.AddressLine2);
-                    dp.Add("city", user.City);
-                    dp.Add("postalCode", user.PostalCode);
-                    dp.Add("country", user.Country);
-                    dp.Add("alternateMobile", user.AlternateMobile);
-                    result=await connection.ExecuteAsync("RegisterUserAddressTable_SP", dp, commandType: CommandType.StoredProcedure);
-                }
-
+                int result = await insertupdate(users.Address, userid);
+                
                 return result;
             }
         }
@@ -100,20 +89,45 @@ namespace DapperCrudUsingStoredProcedure.Repositories
                 dynamicParameters.Add("email", user.Email);
                 dynamicParameters.Add("passwordd", user.Password);
                 int result = await connection.ExecuteAsync("UpdateUserTable_SP", dynamicParameters, commandType: CommandType.StoredProcedure);
-                foreach (var address in user.Address)
+
+                int res = await insertupdate(user.Address, user.Id);
+                //foreach (var address in user.Address)
+                //{
+                //    DynamicParameters dp = new DynamicParameters();
+                //    dp.Add("userId", address.UserId);
+                //    dp.Add("addressLine1", address.AddressLine1);
+                //    dp.Add("addressLine2", address.AddressLine2);
+                //    dp.Add("city", address.City);
+                //    dp.Add("postalCode", address.PostalCode);
+                //    dp.Add("country", address.Country);
+                //    dp.Add("alternateMobile", address.AlternateMobile);
+                //    result = await connection.ExecuteAsync("UpdateUserAddressTable_SP", dp, commandType: CommandType.StoredProcedure);
+                //}
+                return res;
+            }
+        }
+
+        public async Task<int> insertupdate(List<UserAddressModel> addresses, int userid)
+        {
+            using (var connection = _dbContext.CreateConnection())
+            {
+                int result = 0;
+            UserModel us = new UserModel();
+                foreach (var user in addresses)
                 {
                     DynamicParameters dp = new DynamicParameters();
-                    dp.Add("userId", address.UserId);
-                    dp.Add("addressLine1", address.AddressLine1);
-                    dp.Add("addressLine2", address.AddressLine2);
-                    dp.Add("city", address.City);
-                    dp.Add("postalCode", address.PostalCode);
-                    dp.Add("country", address.Country);
-                    dp.Add("alternateMobile", address.AlternateMobile);
+                    dp.Add("userId", userid);
+                    dp.Add("addressLine1", user.AddressLine1);
+                    dp.Add("addressLine2", user.AddressLine2);
+                    dp.Add("city", user.City);
+                    dp.Add("postalCode", user.PostalCode);
+                    dp.Add("country", user.Country);
+                    dp.Add("alternateMobile", user.AlternateMobile);
                     result = await connection.ExecuteAsync("UpdateUserAddressTable_SP", dp, commandType: CommandType.StoredProcedure);
+
                 }
-                return result;
             }
+            return 0;
         }
 
         public async Task<int> DeleteUser(int id)
